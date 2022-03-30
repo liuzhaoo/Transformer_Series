@@ -10,14 +10,17 @@ def sequence_mask(X, valid_len, value=0):
 
 
 def masked_softmax(X, valid_lens):
-    print('start')
+    # print('start')
     if valid_lens is None:
         return torch.nn.functional.softmax(X,dim=-1)
     else:
         shape = X.shape
 
+
         if valid_lens.dim() == 1:
+
             valid_lens = torch.repeat_interleave(valid_lens, shape[1])
+
         else:
             valid_lens = valid_lens.reshape(-1)
 
@@ -27,5 +30,5 @@ def masked_softmax(X, valid_lens):
 
 
 if __name__ == '__main__':
-    x = torch.tensor([[1, 2, 3, 4], [4, 5, 6, 7], [7, 8, 9, 0]])
+    # x = torch.tensor([[1, 2, 3, 4], [4, 5, 6, 7], [7, 8, 9, 0]])
     print(masked_softmax(torch.rand(2, 2, 4), torch.tensor([1, 3])))
