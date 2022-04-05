@@ -31,4 +31,10 @@ def masked_softmax(X, valid_lens):
 
 if __name__ == '__main__':
     # x = torch.tensor([[1, 2, 3, 4], [4, 5, 6, 7], [7, 8, 9, 0]])
-    print(masked_softmax(torch.rand(2, 2, 4), torch.tensor([1, 3])))
+    # print(masked_softmax(torch.rand(2, 2, 4), torch.tensor([1, 3])))
+    num_steps = 6
+    batch_size =3
+    dec_valid_lens = torch.arange(
+        1, num_steps + 1).repeat(batch_size, 1)
+
+    print(dec_valid_lens)

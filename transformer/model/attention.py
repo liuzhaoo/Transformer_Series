@@ -16,14 +16,14 @@ class Scaled_Dot_Product_Attention(nn.Module):
         :param valid_lens: 对当前步之后的数据进行mask (batch_size,) 或者(batch_size,n_q)
         :return:
         """
-        d = queries.shapen[-1]
+        d = queries.shape[-1]
         scores = torch.bmm(queries,keys.transpose(1,2)) / math.sqrt(d)
-        attention_weigths = masked_softmax(scores,valid_lens)
-        return torch.bmm(self.dropout(attention_weigths),values)
+        self.attention_weigths = masked_softmax(scores,valid_lens)
+        return torch.bmm(self.dropout(self.attention_weigths),values)
 
-class MutiHeadAttention(nn.Module):
+class MultiHeadAttention(nn.Module):
     def __init__(self,key_size,query_size,value_size,num_hiddens,num_heads,dropout,bias=False,**kwargs):
-        super(MutiHeadAttention, self).__init__()
+        super(MultiHeadAttention, self).__init__()
         self.num_heads = num_heads
         self.attention = Scaled_Dot_Product_Attention(dropout)
 
