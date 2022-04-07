@@ -18,8 +18,8 @@ class Scaled_Dot_Product_Attention(nn.Module):
         """
         d = queries.shape[-1]
         scores = torch.bmm(queries,keys.transpose(1,2)) / math.sqrt(d)
-        self.attention_weigths = masked_softmax(scores,valid_lens)
-        return torch.bmm(self.dropout(self.attention_weigths),values)
+        self.attention_weights = masked_softmax(scores,valid_lens)
+        return torch.bmm(self.dropout(self.attention_weights),values)
 
 class MultiHeadAttention(nn.Module):
     def __init__(self,key_size,query_size,value_size,num_hiddens,num_heads,dropout,bias=False,**kwargs):
@@ -43,7 +43,7 @@ class MultiHeadAttention(nn.Module):
         """
 
         queries = self.transpose_qkv(self.W_q(queries),self.num_heads)
-        keys = self.transpose_qkv(self.W_(keys),self.num_heads)
+        keys = self.transpose_qkv(self.W_k(keys),self.num_heads)
         values = self.transpose_qkv(self.W_v(values),self.num_heads)
 
         if valid_lens is not None:

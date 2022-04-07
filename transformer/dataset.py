@@ -1,13 +1,8 @@
-
+import torch
 from d2l import torch as d2l
-from data_tools import count_corpus
+from data_tools import Vocab
+from torch.utils import data
 
-# d2l.DATA_HUB['fra-eng'] = (d2l.DATA_URL + 'fra-eng.zip',
-#                            '94646ad1522d915e7b0f9296181140edcf86a4f5')
-#
-# data_dir = d2l.download_extract('fra-eng')
-
-fra_eng_dir = '/Users/zhaoliu/PROJECTS/models/Transformer_series/data/fra-eng/fra.txt'
 def read_mnt_data(dir_path):
     with open(dir_path,'r',encoding='UTF-8') as f:
         return f.read()
@@ -39,26 +34,56 @@ def tokenize_nmt(text,num_examples=None):
             target.append(parts[1].split(' '))
     return source,target
 
-raw_text = read_mnt_data(fra_eng_dir)
-text = preprocess_nmt(raw_text)
-source,target = tokenize_nmt(text,1000)
+def truncate_pad(line,num_steps,padding_token):
+    # 截断或填充文本，以保持num_steps相同
+    if len(line) > num_steps:
+        return line[:num_steps]
+    return line + [padding_token] * (num_steps - len(line))
 
-# counter = count_corpus(source)
-#
-# _token_freqs = sorted(counter.items(), key=lambda x: x[1],
-#                                    reverse=True)
-#
-# print(_token_freqs)
+def build_array_nmt(lines,vocab,num_steps):
+    # 将文本序列转换为小批量
+    lines = [vocab[l] for l in lines]
+    lines = [l + [vocab['<eos>']] for l in lines]
+    array = torch.tensor([truncate_pad(l,num_steps,vocab['<pad>'])
+                         for l in lines])
+    valid_len = (array != vocab['<pad>']).type(torch.int32).sum(1)
 
-src_vocab = d2l.Vocab(source, min_freq=2,
+    return array,valid_len
+
+def load_array(data_arrays, batch_size, is_train=True):
+    """Construct a PyTorch data iterator.
+
+    Defined in :numref:`sec_linear_concise`"""
+    dataset = data.TensorDataset(*data_arrays)
+    return data.DataLoader(dataset, batch_size, shuffle=is_train)
+
+def load_data_nmt(batch_size,num_steps,data_dir,num_examples=600):
+    text = preprocess_nmt(read_mnt_data(data_dir))
+    # source, target 分别为原语言和目标语言的词元（list）
+    source, target = tokenize_nmt(text, num_examples)
+
+    # src_vocab,tgt_vocab 分别是原语言和目标语言的词表
+    src_vocab = Vocab(source, min_freq=2,
                       reserved_tokens=['<pad>', '<bos>', '<eos>'])
+    tgt_vocab = Vocab(target, min_freq=2,
+                      reserved_tokens=['<pad>', '<bos>', '<eos>'])
+    # src_array 是词表内的所有词的索引值，维度为（n,num_steps）n是词表的长度
+    src_array, src_valid_len = build_array_nmt(source, src_vocab, num_steps)
+    tgt_array, tgt_valid_len = build_array_nmt(target, tgt_vocab, num_steps)
+    data_arrays = (src_array,src_valid_len,tgt_array,tgt_valid_len)
+    data_iter = load_array(data_arrays,batch_size)  # dataloader
 
-# print(src_vocab.idx_to_token[:100])
-# print(src_vocab.token_to_idx)
+    return data_iter,src_vocab,tgt_vocab
 
-print(src_vocab.to_tokens(5))
-# print(src_vocab[1100])
-# print(source[:6],target[:6])
+
+
+fra_eng_dir = '/Users/zhaoliu/PROJECTS/models/Transformer_series/data/fra-eng/fra.txt'
+
+
+
+
+
+
 
 
 

@@ -3,8 +3,8 @@ import math
 import torch
 import numpy as np
 from torch import nn
-from attention import MultiHeadAttention
-from network import PositionalEncoding,AddNorm,PositionWiseFFN
+from .attention import MultiHeadAttention
+from .network import PositionalEncoding,AddNorm,PositionWiseFFN
 
 class Encorder(nn.Module):
     def __init__(self,quiry_size,key_size,value_size,num_hiddens,
@@ -24,11 +24,11 @@ class Encorder(nn.Module):
         return self.addnorm2(Y,self.ffn(Y))
 
 
-class TransformerEncorder(nn.Module):
+class TransformerEncoder(nn.Module):
     # 包含位置编码的n个attention
     def __init__(self,vocab_size,key_size,query_size,value_size,num_hiddens,normshape,
                  ffn_num_input,ffn_num_hiddens,num_heads,num_layers,dropout,bias=False):
-        super(TransformerEncorder, self).__init__()
+        super(TransformerEncoder, self).__init__()
         self.num_hiddens = num_hiddens
         self.embedding = nn.Embedding(vocab_size,num_hiddens)
         self.pos_encoding = PositionalEncoding(num_hiddens,dropout)
@@ -55,12 +55,12 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.attention_mask = MultiHeadAttention(key_size,query_size,value_size,num_hiddens,
                                                  num_heads,dropout)
-        self.addnorm1 = AddNorm(norm_shape,dropout)
+        self.addnorm1 = AddNorm(dropout,norm_shape)
         self.m_attention = MultiHeadAttention(key_size,query_size,value_size,num_hiddens,
                                                  num_heads,dropout)
-        self.addnorm2 = AddNorm(norm_shape, dropout)
+        self.addnorm2 = AddNorm(dropout,norm_shape)
         self.ffn = PositionWiseFFN(ffn_num_input,ffn_num_hiddens,num_hiddens)
-        self.addnorm3 = AddNorm(norm_shape, dropout)
+        self.addnorm3 = AddNorm(dropout,norm_shape)
         self.i = i
 
     def forward(self,X,state):
@@ -80,14 +80,14 @@ class Decoder(nn.Module):
 
         X2 = self.attention_mask(X,key_values,key_values,decoder_validlens)
         Y = self.addnorm1(X,X2)
-        Y2 = self.attention_mask(Y,encoder_outputs,encoder_outputs,encoder_validlens)
+        Y2 = self.m_attention(Y,encoder_outputs,encoder_outputs,encoder_validlens)
         Z = self.addnorm2(Y,Y2)
         return self.addnorm3(Z,self.ffn(Z)),state
 
 class TransformerDecoder(nn.Module):
     def __init__(self,vocab_size,key_size,query_size,value_size,num_hiddens,normshape,
                  ffn_num_input,ffn_num_hiddens,num_heads,num_layers,dropout,**kwargs):
-        super(Decoder, self).__init__()
+        super(TransformerDecoder, self).__init__()
         self.num_hiddens = num_hiddens
         self.num_layers = num_layers
         self.embedding = nn.Embedding(vocab_size,num_hiddens)
@@ -99,8 +99,9 @@ class TransformerDecoder(nn.Module):
                 Decoder(key_size,query_size,value_size,num_hiddens,normshape,ffn_num_input,
                         ffn_num_hiddens,num_heads,dropout,i))
         self.dense = nn.Linear(num_hiddens,vocab_size)
+
     def init_state(self,encoder_outputs,encoder_validlens,*args):
-        return [encoder_outputs,encoder_validlens,[None]*self.num_heads]
+        return [encoder_outputs,encoder_validlens,[None]*self.num_layers]
 
     def forward(self,X,state):
         X = self.pos_encoding(self.embedding(X)*math.sqrt(self.num_hiddens))
@@ -109,6 +110,17 @@ class TransformerDecoder(nn.Module):
             X,state = block(X,state)
 
         return self.dense(X),state
+
+class EncoderDecoder(nn.Module):
+    def __init__(self,encoder,decoder):
+        super(EncoderDecoder,self).__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def forward(self,enc_in,dec_in,*args):
+        enc_out = self.encoder(enc_in,*args)
+        dec_state = self.decoder.init_state(enc_out,*args)
+        return self.decoder(dec_in,dec_state)
 
 
 
