@@ -140,8 +140,11 @@ class ViT(nn.Module):
         return self.mlp_head(x)
 
 if __name__ == '__main__':
+    from thop import profile
+
+    from thop import clever_format
     v = ViT(
-        image_size=256,
+        image_size=512,
         patch_size=32,
         num_classes=1000,
         dim=1024,
@@ -152,9 +155,20 @@ if __name__ == '__main__':
         emb_dropout=0.1
     )
 
-    img = torch.randn(1, 3, 256, 256)
+
+    img = torch.randn(1, 3, 512, 512)
 
     preds = v(img)  # (1, 1000)
     print(preds.shape)
+
+
+    flops, params = profile(v, inputs=(img, ))
+    flops, params = clever_format([flops, params], "%.3f")
+
+    print('flops:', flops)
+    print('params:', params)
+    print('Total params: %.2fM' % (sum(p.numel()
+                                       for p in v.parameters()) / 1000000.0))
+
 
 
