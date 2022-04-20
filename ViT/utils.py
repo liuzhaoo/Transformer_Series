@@ -5,6 +5,7 @@ import torch.nn as nn
 import random
 import os
 
+from path import Path
 
 class AverageMeter(object):
     def __init__(self):
@@ -16,7 +17,7 @@ class AverageMeter(object):
         self.sum = 0
         self.count = 0
 
-    def updata(self, val, n=1):
+    def update(self, val, n=1):
         self.val = val
         self.sum += val * n
         self.count += n
@@ -25,6 +26,7 @@ class AverageMeter(object):
 
 class Logger(object):
     def __init__(self, path, header):
+        path = Path(path)
         self.log_file = path.open('w')
         self.logger = csv.writer(self.log_file, delimiter='\t')  # 待查
 
@@ -90,9 +92,25 @@ def load_flower_data(root_path, val_ratio=0.2):
         json_f.write(json_str)
 
 
+def save_checkpoint(output_path,epoch,model,optimizer,scheduler):
+    if hasattr(model,'module'):
+        model_state_dict = model.module.state_dict()
+    else:
+        model_state_dict = model.state_dict()
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
+    save_states = {
+        'epoch':epoch,
+        'state_dict':model_state_dict,
+        'optimizer': optimizer.state_dict(),
+        'scheduler': scheduler.state_dict(),
+    }
+    torch.save(output_path,save_states)
+
+
 if __name__ == '__main__':
     root_path = '/Users/zhaoliu/PROJECTS/models/Transformer_series/data/flower_photos'
     load_flower_data(root_path)
 
-    # x = ['asdsadas','adasfasfs','fghdhhdhdf']
+
     # print('\n'.join(x))

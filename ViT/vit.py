@@ -13,6 +13,7 @@ class PreNorm(nn.Module):
         super(PreNorm, self).__init__()
         self.norm = nn.LayerNorm(dim)
         self.fn = fn
+
     def forward(self,x,**kwargs):
         return self.fn(self.norm(x),**kwargs)
 
@@ -27,6 +28,7 @@ class FeedForward(nn.Module):
             nn.Linear(hidden_dim,dim),
             nn.Dropout(dropout)
         )
+
     def forward(self,x):
         return self.net(x)
 
@@ -77,6 +79,7 @@ class Transformer(nn.Module):
                 PreNorm(dim,Attention(dim,heads,dim_head,dropout)),
                 PreNorm(dim,FeedForward(dim,mlp_dim,dropout))
             ]))
+
     def forward(self,x):
         for attn, ff in self.layers:
             x = attn(x) + x
@@ -85,14 +88,15 @@ class Transformer(nn.Module):
 
 class ViT(nn.Module):
     # 命名关键词参数 在调用时必须输入参数名
-    def __init__(self,*,image_size,patch_size,num_classes,dim,depth,heads,
+    def __init__(self,image_size,patch_size,num_classes,dim,depth,heads,
                  mlp_dim,pool='cls',channels=3,dim_head=64,dropout=0.,
                  emb_dropout=0.):
         super(ViT, self).__init__()
         image_height, image_width = pair(image_size)
         patch_height, patch_width = pair(patch_size)
 
-        assert image_width % patch_width == 0 and image_height % patch_height == 0, 'Image dimensions must be divisible by the patch size'
+        assert image_width % patch_width == 0 and image_height % patch_height == 0, \
+            'Image dimensions must be divisible by the patch size'
 
         num_patches = (image_height // patch_height) * (image_width // patch_width)
         patch_dim = channels * patch_width * patch_height
@@ -139,6 +143,22 @@ class ViT(nn.Module):
 
         return self.mlp_head(x)
 
+def get_model(opt):
+    model = ViT(
+        image_size=opt.image_size,
+        patch_size=16,
+        num_classes=opt.num_classes,
+        dim=1024,
+        depth=6,
+        heads=16,
+        mlp_dim=2048,
+        dropout=0.1,
+        emb_dropout=0.1
+    )
+
+    return model
+
+
 if __name__ == '__main__':
     from thop import profile
 
@@ -155,12 +175,10 @@ if __name__ == '__main__':
         emb_dropout=0.1
     )
 
-
     img = torch.randn(1, 3, 512, 512)
 
     preds = v(img)  # (1, 1000)
     print(preds.shape)
-
 
     flops, params = profile(v, inputs=(img, ))
     flops, params = clever_format([flops, params], "%.3f")
@@ -169,6 +187,3 @@ if __name__ == '__main__':
     print('params:', params)
     print('Total params: %.2fM' % (sum(p.numel()
                                        for p in v.parameters()) / 1000000.0))
-
-
-

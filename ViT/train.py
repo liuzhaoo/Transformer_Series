@@ -7,15 +7,16 @@ def train_one_epoch(epoch,model,dataloader,loss_fn,optimizer,device,tb_writer,ba
     print('train at epoch {}'.format(epoch))
     model.train()
 
-    batch_time = AverageMeter
-    dataload_time = AverageMeter
-    Loss = AverageMeter
-    Acc = AverageMeter
+    batch_time = AverageMeter()
+    dataload_time = AverageMeter()
+    Loss = AverageMeter()
+    Acc = AverageMeter()
 
     end_time = time.time()
 
     # 后续加上tqdm
     for i, (img,label) in enumerate(dataloader):
+        print(label)
 
         dataload_time.update(time.time()-end_time)
 
@@ -25,15 +26,15 @@ def train_one_epoch(epoch,model,dataloader,loss_fn,optimizer,device,tb_writer,ba
         loss = loss_fn(outputs,label)
         acc = calculate_accuracy(outputs,label)
 
-        Loss.updata(loss.item(),img.size(0))
-        Acc.updata(acc,img.size(0))
+        Loss.update(loss.item(),img.size(0))
+        Acc.update(acc,img.size(0))
 
         # 反向传播
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        batch_time.updata(time.time()-end_time)
+        batch_time.update(time.time()-end_time)
         end_time = time.time()
 
         if batch_logger is not None:
@@ -66,6 +67,8 @@ def train_one_epoch(epoch,model,dataloader,loss_fn,optimizer,device,tb_writer,ba
     if tb_writer is not None:
         tb_writer.add_scalar('train/loss', Loss.avg, epoch)
         tb_writer.add_scalar('train/acc', Acc.avg, epoch)
+
+    return Loss.avg, Acc.avg
 
 
 

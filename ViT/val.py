@@ -3,7 +3,7 @@ import time
 from utils import AverageMeter,calculate_accuracy
 import torch
 
-def train_one_epoch(epoch,model,dataloader,optimizer,device,tb_writer,epoch_logger):
+def val_one_epoch(epoch,model,loss_fn,dataloader,device,tb_writer,epoch_logger):
     print('validation at epoch {}'.format(epoch))
     model.eval()
 
@@ -25,10 +25,10 @@ def train_one_epoch(epoch,model,dataloader,optimizer,device,tb_writer,epoch_logg
             loss = loss_fn(outputs,label)
             acc = calculate_accuracy(outputs,label)
 
-            Loss.updata(loss.item(),img.size(0))
-            Acc.updata(acc,img.size(0))
+            Loss.update(loss.item(),img.size(0))
+            Acc.update(acc,img.size(0))
 
-            batch_time.updata(time.time()-end_time)
+            batch_time.update(time.time()-end_time)
             end_time = time.time()
 
             print('Epoch:[{0}][{1}/{2}]\t'
